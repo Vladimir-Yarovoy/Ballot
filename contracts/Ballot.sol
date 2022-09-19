@@ -4,10 +4,11 @@ pragma solidity >=0.8.0 <0.9.0;
 contract Ballot {
 
     struct Voter {
-        uint weight; // weight is accumulated by delegation
+        uint8 weight; // weight is accumulated by delegation
         bool voted;  // if true, that person already voted
         address delegate; // person delegated to
         uint vote;   // index of the voted proposal
+        bool votedMyself;
     }
 
     struct Proposal {
@@ -52,6 +53,7 @@ contract Ballot {
     function delegate(address to) external {
 
         Voter storage sender = voters[msg.sender];
+        require(sender.weight != 0, "Has no right to delegate.");
         require(!sender.voted, "You already voted.");
         require(to != msg.sender, "Self-delegation is disallowed.");
 
@@ -60,15 +62,8 @@ contract Ballot {
             require(to != msg.sender, "Found loop in delegation.");
         }
 
-        Voter storage delegate_ = voters[to];
-        sender.voted = true;
         sender.delegate = to;
 
-        if (delegate_.voted) {
-            proposals[delegate_.vote].voteCount += sender.weight;
-        } else {
-            delegate_.weight += sender.weight;
-        }
     }
 
     function vote(uint proposal) external {
@@ -77,7 +72,18 @@ contract Ballot {
         require(!sender.voted, "Already voted.");
         sender.voted = true;
         sender.vote = proposal;
-        proposals[proposal].voteCount += sender.weight;
+        sender.votedMyself = true;
+        proposals[proposal].voteCount += 1;
+    }
+
+    function voteByProxy(address addressbyProxy, uint proposal) external {
+        Voter storage voterByProxy = voters[addressbyProxy];
+        require(addressbyProxy != msg.sender, "Use function 'vote' for vote");
+        require(!voterByProxy.voted, "Already voted.");
+        require(voterByProxy.delegate == msg.sender, "Opportunity to vote was not delegated");
+        voterByProxy.voted = true;
+        voterByProxy.vote = proposal;
+        proposals[proposal].voteCount += 1;
     }
 
 
