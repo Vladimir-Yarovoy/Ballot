@@ -41,12 +41,6 @@ describe('lesson1 contact', () => {
             await expect (ballot.connect(addr1).giveRightToVote(addr2.address)).to.be.revertedWith("Only chairperson can give right to vote.")
         });
 
-        it('It is impossible to vote more than once from the same address', async () => {
-            await ballot.connect(owner).giveRightToVote(addr1.address)
-            await ballot.connect(addr1).vote(1)
-            await expect (ballot.connect(owner).giveRightToVote(addr1.address)).to.be.revertedWith("The voter already voted.")
-        });
-
         it('It is impossible to give more than one vote to one address', async () => {
             await ballot.connect(owner).giveRightToVote(addr1.address)
             await expect (ballot.connect(owner).giveRightToVote(addr1.address)).to.be.reverted
@@ -112,6 +106,7 @@ describe('lesson1 contact', () => {
             await ballot.voteByProxy(addr1.address, 1)
             voter = await ballot.getVoter(addr1.address)
             expect (voter.voted).to.eq(true)
+            expect (voter.votedMyself).to.eq(false)
         });
 
         it('Use function "vote", if to vote myself', async () => {
