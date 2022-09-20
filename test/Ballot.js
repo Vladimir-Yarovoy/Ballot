@@ -41,6 +41,46 @@ describe('lesson1 contact', () => {
             await expect (ballot.connect(addr1).giveRightToVote(addr2.address)).to.be.revertedWith("Only chairperson can give right to vote.")
         });
 
+        it('It is impossible to vote more than once from the same address', async () => {
+            await ballot.connect(owner).giveRightToVote(addr1.address)
+            await ballot.connect(addr1).vote(1)
+            await expect (ballot.connect(owner).giveRightToVote(addr1.address)).to.be.revertedWith("The voter already voted.")
+        });
+
+        it('It is impossible to give more than one vote to one address', async () => {
+            await ballot.connect(owner).giveRightToVote(addr1.address)
+            await expect (ballot.connect(owner).giveRightToVote(addr1.address)).to.be.reverted
+        });
+
+    });
+
+    describe('Test function delegate', () => {
+
+        it('There is an opportunity to delegate', async () => {
+            await ballot.delegate(addr1.address)
+            voter = await ballot.getVoter(owner.address)
+            expect (voter.delegate).to.eq(addr1.address)
+        });
+
+        it('There is NOT an opportunity to delegate', async () => {
+            await expect (ballot.connect(addr1).delegate(owner.address)).to.be.revertedWith("Has no right to delegate.");
+        });
+
+        it('There is NOT an opportunity to delegate, if already voted', async () => {
+            await ballot.vote(1)
+            await expect (ballot.delegate(addr1.address)).to.be.revertedWith("You already voted.")
+        });
+
+        it('There is NOT an opportunity to delegate to myself', async () => {
+            await expect (ballot.delegate(owner.address)).to.be.revertedWith("Self-delegation is disallowed.");
+        });
+
+        it('There is NOT an opportunity to delegate back', async () => {
+            await ballot.delegate(addr1.address)
+            await ballot.giveRightToVote(addr1.address)
+            await expect (ballot.connect(addr1).delegate(owner.address)).to.be.revertedWith("Found loop in delegation.");
+        });
+
     });
 
     describe('Test function vote', () => {
@@ -64,48 +104,48 @@ describe('lesson1 contact', () => {
 
     });
 
-    describe('Test function vote', () => {
+    describe('Test function voteByProxy', () => {
 
-        it('There is an opportunity to delegate', async () => {
-            await ballot.delegate(addr1.address)
-            voter = await ballot.getVoter(owner.address)
-            expect (voter.delegate).to.eq(addr1.address)
-        });
-
-        it('There is NOT an opportunity to delegate to myself', async () => {
-            await expect (ballot.delegate(owner.address)).to.be.revertedWith("Self-delegation is disallowed.");
-        });
-
-        it('There is NOT an opportunity to delegate back', async () => {
-            await ballot.delegate(addr1.address)
-            await expect (ballot.connect(addr1).delegate(owner.address)).to.be.revertedWith("Found loop in delegation.");
-        });
-
-        it('Delegate a vote, if the delegate already voted', async () => {
+        it('There is an opportunity to vote', async () => {
             await ballot.giveRightToVote(addr1.address)
-            await ballot.connect(addr1).vote(0)
+            await ballot.connect(addr1).delegate(owner.address)
+            await ballot.voteByProxy(addr1.address, 1)
+            voter = await ballot.getVoter(addr1.address)
+            expect (voter.voted).to.eq(true)
+        });
+
+        it('Use function "vote", if to vote myself', async () => {
+            await expect (ballot.connect(owner).voteByProxy(owner.address, 0)).to.be.revertedWith("Use function 'vote' for vote")
+        });
+
+        it('There is NOT an opportunity to vote twice from the same address', async () => {
             await ballot.delegate(addr1.address)
-            proposals = await ballot.proposalsAll()
-            expect (proposals[0].voteCount).to.eq(2)
+            await ballot.vote(1)
+            await expect (ballot.connect(addr1).voteByProxy(owner.address, 1)).to.be.revertedWith("Already voted.")
+        });
+
+        it('There is NOT an opportunity to vote from another address', async () => {
+            await expect (ballot.voteByProxy(addr1.address, 1)).to.be.revertedWith("Opportunity to vote was not delegated")
         });
 
     });
 
-//Test function winningProposal
+    describe('Test winner functions', () => {
 
-    it('Winner results (proposal number)', async () => {
-        await ballot.vote(0)
-        proposals = await ballot.proposalsAll()
-        winnerProposal = await ballot.winningProposal()
-        expect(proposals[winnerProposal].voteCount).to.equal(1)
-    });
+        it('Winner results (proposal number)', async () => {
+            await ballot.vote(0)
+            proposals = await ballot.proposalsAll()
+            winnerProposal = await ballot.winningProposal()
+            expect(proposals[winnerProposal].voteCount).to.equal(1)
+        });
 
-//Test function winner
 
-    it('Winner results (proposal name and vote count)', async () => {
-        await ballot.vote(0)
-        winnerNameAndCount = await ballot.winner()
-        expect(winnerNameAndCount.name).to.equal(names[0])
-        expect(winnerNameAndCount.winnerVoteCount_).to.equal(1)
+        it('Winner results (proposal name and vote count)', async () => {
+            await ballot.vote(0)
+            winnerNameAndCount = await ballot.winner()
+            expect(winnerNameAndCount.name).to.equal(names[0])
+            expect(winnerNameAndCount.winnerVoteCount_).to.equal(1)
+        });
+
     });
 });
