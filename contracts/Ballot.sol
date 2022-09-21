@@ -36,16 +36,16 @@ contract Ballot {
     }
 
 
-   function giveRightToVote(address voter) external {
+    function giveRightToVote(address voter) external {
 
       require(
       msg.sender == chairperson,
       "Only chairperson can give right to vote."
        );
-       
+
       require(voters[voter].weight == 0);
     voters[voter].weight = 1;
-   }
+    }
 
     function delegate(address to) external {
 
@@ -83,18 +83,11 @@ contract Ballot {
         proposals[proposal].voteCount += 1;
     }
 
-
-/*function proposalsAll() public view returns (Proposal[] memory, uint) {
-        return (proposals, proposals.length);
-
-    }
-*/
-
-function proposalsAll() public view returns (Proposal[] memory) {
+    function proposalsAll() public view returns (Proposal[] memory) {
         return proposals;
     }
 
-function getVoter(address voter) public view returns (Voter memory) {
+    function getVoter(address voter) public view returns (Voter memory) {
         return voters[voter]; // new Voter (voters[voter]) --> new Voter(undefined)
     }
 
