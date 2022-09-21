@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 
   
-describe('lesson1 contact', () => {
+describe('Ballot contract', () => {
 
     beforeEach(async () => {
 
